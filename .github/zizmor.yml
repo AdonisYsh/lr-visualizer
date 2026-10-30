@@ -1,0 +1,5 @@
+# zizmor settings, found automatically by the Security workflow.
+rules:
+  # Suggests `uses: $/...` for local actions; `./...` is the documented form.
+  self-repository:
+    disable: true
