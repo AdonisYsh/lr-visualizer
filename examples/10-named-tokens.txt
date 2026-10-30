@@ -1,0 +1,16 @@
+// Named tokens
+// ------------
+// Multi-character symbol mode. Any token longer than one character switches the
+// whole grammar to space-separated reading, so `if expr then stmt` is four
+// symbols rather than sixteen characters.
+//
+// Note that `stmt` and `expr` are non-terminals despite being lowercase. What
+// makes a symbol a non-terminal is that some production defines it - never its
+// spelling.
+//
+// conflicts/states:  LR(0) 0/11  SLR(1) 0/11  LALR(1) 0/11  CLR(1) 0/13
+//
+// Try it with the test string:  if id then id = num
+
+stmt -> if expr then stmt | id = expr
+expr -> id | num

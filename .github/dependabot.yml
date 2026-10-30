@@ -1,0 +1,33 @@
+# Weekly update PRs, for releases at least a week old. wasm-bindgen is held back: its CLI is pinned to the
+# crate's exact version, so it is bumped by hand (README, "Building").
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /engine
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: wasm-bindgen
+    groups:
+      cargo:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: /tests
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

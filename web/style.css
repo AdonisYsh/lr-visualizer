@@ -1,0 +1,809 @@
+/* LR visualizer. Built for a projector: no meaning by colour alone, and a print stylesheet for handouts. */
+
+/* ----------------------------------------------------------------- tokens
+   Every colour on the page is a token here; text pairs meet WCAG AA (4.5:1) in both themes. */
+
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --panel: #f4f5f7;
+  --ink: #16191d;
+  --ink-soft: #5b626b;
+  --line: #c9ced6;
+  --line-strong: #16191d;
+  --accent: #1c4fd8;
+  --accent-strong: #1740b0;   /* the primary button under the pointer */
+  --accent-soft: #e4ecff;
+  --on-accent: #ffffff;       /* text on an --accent fill */
+  --warn: #8a5300;
+  --warn-soft: #fff3d9;
+  --error: #a11212;
+  --error-soft: #ffe6e6;
+  --ok: #14672f;
+  --ok-soft: #e2f5e8;
+  --kernel: #e4dcf7;
+  --stripe-a: #ffffff;        /* the two bands of an empty table cell */
+  --stripe-b: #f2f3f5;
+  --scrollbar: auto;          /* thumb and track; auto = the platform default */
+  --mono: "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* The dark set is written twice, for the system setting and for the toggle: the two copies must stay identical. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #15181c;
+    --panel: #1e2228;
+    --ink: #e6e8eb;
+    --ink-soft: #a7b0ba;
+    --line: #4a515b;
+    --line-strong: #c9ced6;
+    --accent: #82a8ff;
+    --accent-strong: #a9c3ff;
+    --accent-soft: #1e2c4c;
+    --on-accent: #0b1220;
+    --warn: #f0b45c;
+    --warn-soft: #36280f;
+    --error: #ff8f85;
+    --error-soft: #3d1a1a;
+    --ok: #72d492;
+    --ok-soft: #132f1d;
+    --kernel: #352a55;
+    --stripe-a: #15181c;
+    --stripe-b: #1f2328;
+    --scrollbar: #5d6570 #1e2228;
+  }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #15181c;
+    --panel: #1e2228;
+    --ink: #e6e8eb;
+    --ink-soft: #a7b0ba;
+    --line: #4a515b;
+    --line-strong: #c9ced6;
+    --accent: #82a8ff;
+    --accent-strong: #a9c3ff;
+    --accent-soft: #1e2c4c;
+    --on-accent: #0b1220;
+    --warn: #f0b45c;
+    --warn-soft: #36280f;
+    --error: #ff8f85;
+    --error-soft: #3d1a1a;
+    --ok: #72d492;
+    --ok-soft: #132f1d;
+    --kernel: #352a55;
+    --stripe-a: #15181c;
+    --stripe-b: #1f2328;
+    --scrollbar: #5d6570 #1e2228;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--bg);
+  /* radios, the scrubber and checkboxes follow the theme too */
+  accent-color: var(--accent);
+  scrollbar-color: var(--scrollbar);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#panel {
+  width: 350px;
+  min-width: 350px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* The panel's contents, everything but the bar. Collapsing hides this with the
+   `hidden` attribute: the form keeps its values, because nothing is rebuilt. */
+#panel-body { display: flex; flex-direction: column; gap: 14px; }
+#panel-body[hidden] { display: none; }
+
+#panel-bar { display: flex; align-items: center; gap: 8px; }
+#panel-bar button { font-size: 14px; padding: 4px 10px; }
+#panel-toggle { font-size: 18px; line-height: 1.2; min-width: 38px; padding: 2px 8px; }
+#theme-toggle { margin-left: auto; }
+/* the chosen theme is told by weight and a solid border, not by colour alone */
+#theme-toggle[aria-pressed="true"],
+#btn-grammar[aria-expanded="true"] {
+  background: var(--accent-soft); border-color: var(--accent); font-weight: 700;
+}
+
+/* Collapsed: a narrow rail with only the expand button, so the stage gets the
+   whole width for projecting. */
+#app.panel-collapsed #panel {
+  width: 56px;
+  min-width: 56px;
+  padding: 12px 8px;
+  overflow: hidden;
+}
+#app.panel-collapsed #theme-toggle { display: none; }
+
+#stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#view {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 20px 24px;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------- left panel */
+
+h1 {
+  font-size: 19px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+h1 .sub {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  background: var(--bg);
+}
+legend {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  padding: 0 4px;
+}
+
+.variant { display: flex; flex-direction: column; gap: 4px; }
+.variant label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.variant label:hover { background: var(--accent-soft); }
+.variant input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+label.field { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+
+select, textarea, input[type="text"] {
+  width: 100%;
+  font-size: 15px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--ink);
+}
+textarea, input[type="text"] { font-family: var(--mono); }
+textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+
+.note {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 6px 0 0;
+}
+
+button {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--accent-soft); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, select:focus-visible,
+textarea:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#analyze {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
+  width: 100%;
+  padding: 10px;
+}
+#analyze:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+
+/* messages: an icon plus a word, never colour on its own */
+.msg {
+  border: 1px solid var(--line);
+  border-left-width: 5px;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.msg .tag { font-weight: 700; }
+.msg.error { background: var(--error-soft); border-left-color: var(--error); }
+.msg.warning { background: var(--warn-soft); border-left-color: var(--warn); }
+.msg.note { background: var(--accent-soft); border-left-color: var(--accent); }
+.msg .hint { display: block; margin-top: 4px; color: var(--ink-soft); }
+
+.symbols { font-size: 14px; }
+.symbols dt { font-weight: 600; margin-top: 6px; }
+.symbols dd { margin: 2px 0 0; font-family: var(--mono); word-break: break-word; }
+.chip {
+  display: inline-block;
+  font-family: var(--mono);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 5px;
+  margin: 2px 3px 2px 0;
+  background: var(--bg);
+}
+.chip.nt { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+
+/* A symbol is user text and may turn text direction round (right-to-left, U+202E); isolate it. */
+.sym, .chip, .set-member, svg .node text tspan.la { unicode-bidi: isolate; }
+
+/* ------------------------------------------------------------------- tabs */
+
+#tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 20px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.tab {
+  font-size: 15px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  position: relative;
+  top: 1px;
+}
+.tab[aria-selected="true"] {
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 700;
+  border-color: var(--line);
+  border-bottom: 1px solid var(--bg);
+}
+.tab:disabled { opacity: 0.4; cursor: not-allowed; }
+.tab .num {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-right: 5px;
+}
+
+/* ----------------------------------------------------------------- player */
+
+#player {
+  border-top: 2px solid var(--line-strong);
+  background: var(--panel);
+  padding: 8px 20px 10px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 6px 16px;
+  align-items: center;
+}
+#controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#controls button { padding: 5px 9px; font-size: 15px; min-width: 38px; }
+#scrub { width: 100%; }
+#explain {
+  grid-column: 1 / -1;
+  font-size: 19px;
+  line-height: 1.4;
+  min-height: 2.8em;
+  padding: 6px 2px 0;
+}
+#explain .phase {
+  display: inline-block;
+  font-size: 12px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-right: 8px;
+  color: var(--ink-soft);
+  vertical-align: 2px;
+}
+#speed { font-size: 14px; }
+#explain-line { margin: 0; }
+#explain-toggle {
+  font-size: 14px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+#explain-full {
+  margin: 6px 0 0;
+  font-size: 17px;
+  color: var(--ink);
+  border-left: 3px solid var(--line);
+  padding-left: 10px;
+}
+/* `#explain .phase` sets a display, which would beat the UA's [hidden] rule. */
+#explain [hidden] { display: none; }
+
+/* ------------------------------------------------------------------ views */
+
+.view-title { font-size: 17px; margin: 0 0 10px; }
+.view-title:not(:first-child) { margin-top: 22px; }
+
+table.grid {
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 15px;
+}
+table.grid th, table.grid td {
+  border: 1px solid var(--line);
+  padding: 4px 9px;
+  text-align: center;
+  min-width: 42px;
+  white-space: nowrap;
+}
+table.grid th { background: var(--panel); font-weight: 700; }
+table.grid th.rowhead { text-align: right; }
+table.grid td.empty { background: repeating-linear-gradient(45deg, var(--stripe-a), var(--stripe-a) 4px, var(--stripe-b) 4px, var(--stripe-b) 8px); }
+table.grid .group { border-left: 2px solid var(--line-strong); }
+table.grid th.group-title { background: var(--bg); font-size: 13px; letter-spacing: 0.08em; }
+
+/* Not on SVG groups: an outline there draws the whole bounding box, so the diagram marks with strokes. */
+table.grid td.current,
+.set-member.current,
+table.trace tr.current {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  font-weight: 700;
+}
+td.conflict {
+  border: 3px dashed var(--error) !important;
+  background: var(--error-soft);
+  font-weight: 700;
+}
+.warn-mark { font-weight: 700; }
+
+/* The S/R or R/R tag: text with a rule round it, so it survives a black-and-white photocopy. */
+table.grid .conflict-kind {
+  display: inline-block;
+  margin-left: 3px;
+  padding: 0 3px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: var(--error);
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  vertical-align: 0.15em;
+}
+
+/* A filled cell that opens its state in Item Sets on click or Enter. */
+table.grid td.opens-state { cursor: pointer; }
+
+/* A visible keyboard ring on every focusable table cell; the inset shadow keeps the current mark under it. */
+table.grid td[tabindex]:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+table.grid td.current[tabindex]:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.scroller { overflow-x: auto; max-width: 100%; padding-bottom: 4px; }
+
+/* verdict banner */
+.verdict {
+  margin-top: 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 16px;
+  max-width: 68ch;
+}
+.verdict.good { background: var(--ok-soft); border-color: var(--ok); }
+.verdict.bad { background: var(--error-soft); border-color: var(--error); }
+.verdict .headline { font-weight: 700; display: block; margin-bottom: 4px; }
+.verdict .caveat { display: block; margin-top: 6px; font-size: 15px; color: var(--ink-soft); }
+/* A parse on a conflicted table is neither ACCEPT green nor REJECT red: a dashed border and words say so. */
+.verdict.qualified { background: var(--warn-soft); border-color: var(--warn); border-style: dashed; }
+.verdict .conflict-caveat { color: var(--ink); font-weight: 600; }
+
+/* "This grammar is SLR(1), though - try that." under the conflict text */
+.verdict .suggestion { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-weight: 600; }
+button.link-like {
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; font-weight: 700; color: var(--accent);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+button.link-like:hover:not(:disabled) { background: none; color: var(--accent-strong); }
+
+/* grammar view */
+.prod-list { font-family: var(--mono); font-size: 16px; list-style: none; padding: 0; margin: 0; }
+.prod-list li { padding: 2px 6px; border-radius: 4px; }
+.prod-list li.augmented { background: var(--accent-soft); font-weight: 700; }
+.prod-list .idx { display: inline-block; width: 2.4em; color: var(--ink-soft); }
+
+/* FIRST / FOLLOW */
+.set-cell { font-family: var(--mono); text-align: left !important; }
+.set-member { display: inline-block; padding: 0 3px; border-radius: 3px; }
+.set-member.current { outline-offset: 0; }
+
+/* a FOLLOW set that produced reduce entries: click to jump to the first one */
+.set-link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+  cursor: pointer;
+  text-align: left;
+}
+.set-link:hover, .set-link:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.set-link .jump { color: var(--accent); font-weight: 700; }
+
+/* parse trace */
+table.trace { border-collapse: collapse; font-size: 15px; width: 100%; max-width: 1100px; }
+table.trace th, table.trace td {
+  border: 1px solid var(--line);
+  padding: 5px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+table.trace th { background: var(--panel); }
+table.trace td.stack, table.trace td.input { font-family: var(--mono); white-space: pre; }
+table.trace td.input { text-align: right; }
+table.trace tr.current td { background: var(--accent-soft); font-weight: 600; }
+table.trace tr.current td:first-child::before { content: "\25B8 "; }
+.reject-marker { font-family: var(--mono); white-space: pre; font-size: 16px; margin-top: 10px; }
+
+/* item-set diagram */
+/* The frame is as tall as the stage; whatever sits above the drawing takes its own height. */
+#diagram-frame { display: flex; flex-direction: column; height: 100%; }
+#diagram-wrap { display: flex; gap: 12px; flex: 1 1 0; min-height: 320px; }
+#diagram-host {
+  flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+  background: var(--bg); display: flex; flex-direction: column;
+}
+/* diagram.js sizes the drawing in pixels and this box scrolls it; auto margins centre a small one. */
+#diagram-scroll { flex: 1 1 0; min-height: 0; overflow: auto; display: flex; cursor: grab; }
+#diagram-scroll.dragging { cursor: grabbing; }
+#diagram-scroll svg { display: block; flex: none; margin: auto; touch-action: none; }
+/* A row of its own above the drawing, so nothing in the drawing can sit underneath it. */
+#diagram-tools {
+  flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  padding: 4px 6px; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+#diagram-tools button { padding: 4px 10px; font-size: 15px; background: var(--bg); min-width: 34px; }
+/* the active mode is told by weight and a solid border, not by colour alone */
+#diagram-tools button[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent); font-weight: 700;
+}
+#diagram-tools .zoom-readout {
+  font-family: var(--mono); font-size: 13px; color: var(--ink-soft); min-width: 4.5ch; text-align: center;
+}
+/* #view takes focus so the arrow keys reach the player; that focus must be visible. */
+#view:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+#inspector {
+  width: 300px;
+  min-width: 300px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-y: auto;
+  background: var(--panel);
+  font-size: 14px;
+}
+#inspector h3 { margin: 0 0 8px; font-size: 16px; }
+#inspector .item-line { font-family: var(--mono); padding: 2px 4px; border-radius: 3px; }
+#inspector .item-line.kernel { background: var(--kernel); font-weight: 600; }
+#inspector .because { display: block; font-size: 13px; color: var(--ink-soft); padding-left: 12px; }
+/* Lookaheads are the secondary half of an item: smaller and lighter, never competing with the core. */
+#inspector .item-line .la,
+.legend .la { color: var(--ink-soft); font-size: 0.9em; }
+.legend { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+.legend .swatch {
+  display: inline-block; width: 12px; height: 12px; vertical-align: -1px;
+  border: 1px solid var(--line-strong); margin-right: 4px;
+}
+.legend .swatch.kernel { background: var(--kernel); }
+/* The item a clicked table cell came from: a bar and bold, so it still reads in black and white. */
+#inspector .item-line.source-hit {
+  border-left: 5px solid var(--accent);
+  padding-left: 6px;
+  font-weight: 700;
+  background: var(--accent-soft);
+}
+.legend .swatch.hit { border-left: 5px solid var(--accent); background: var(--accent-soft); }
+
+/* Node text is 14px; diagram.js sizes the boxes from these sizes, so change them together. */
+svg .node rect { fill: var(--bg); stroke: var(--line-strong); stroke-width: 1.5; }
+svg .node .hdr, svg .node .kernel-bg { stroke: none; }
+svg .node.current rect.frame { stroke: var(--accent); stroke-width: 4; }
+svg .node .hdr { fill: var(--panel); }
+svg .node text { font-family: var(--mono); font-size: 14px; fill: var(--ink); }
+svg .node text.title { font-weight: 700; font-size: 15px; }
+/* Lookaheads are secondary by colour, not size, so all node text stays readable at the 85% minimum zoom. */
+svg .node text tspan.la { fill: var(--ink-soft); }
+/* "+3 more": the node is truncated, the side panel has the rest */
+svg .node text.more { fill: var(--ink-soft); font-style: italic; }
+svg .node .kernel-bg { fill: var(--kernel); }
+svg .node { cursor: pointer; }
+/* the state shown in the inspector: a dashed ring, readable without colour */
+svg .node rect.sel-ring { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 7 4; }
+svg .node:focus { outline: none; }
+svg .node:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+svg .node:focus-visible rect.frame { stroke: var(--accent); stroke-width: 3; }
+svg .edge path { fill: none; stroke: var(--line-strong); stroke-width: 1.5; }
+svg .edge.current path { stroke: var(--accent); stroke-width: 3.5; }
+svg .edge text { font-family: var(--mono); font-size: 14px; fill: var(--ink); }
+svg .edge .label-bg { fill: var(--bg); stroke: none; }
+svg .edge.current text { font-weight: 700; fill: var(--accent); }
+
+.empty-state { color: var(--ink-soft); font-size: 16px; max-width: 60ch; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+
+/* The compare tab sits apart from the five phases: it summarises the run rather than showing a step. */
+.tab.aside {
+  margin-left: 18px;
+  border-style: dashed;
+}
+
+/* --------------------------------------------------- compare-all-four view */
+
+/* Unlike the ACTION/GOTO grid, this one holds sentences, so it wraps rather than scrolls. */
+table.grid.compare { width: 100%; max-width: 108ch; }
+table.grid.compare td, table.grid.compare th {
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+}
+table.grid.compare .rowhead { white-space: nowrap; font-size: 16px; }
+table.grid.compare .rowhead .mark { margin-right: 6px; }
+table.grid.compare tr.clean .rowhead .mark { color: var(--ok); }
+table.grid.compare tr.dirty .rowhead .mark { color: var(--error); }
+table.grid.compare tr.showing { background: var(--accent-soft); }
+table.grid.compare .showing-tag,
+table.grid.compare .switch {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: var(--sans);
+  margin-top: 2px;
+}
+/* No italics in the sans stack: system-ui has no italic face on several platforms. */
+table.grid.compare .showing-tag {
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+table.grid.compare .switch {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  padding: 1px 7px;
+  cursor: pointer;
+  color: var(--accent);
+}
+table.grid.compare .switch:hover { background: var(--accent-soft); }
+table.grid.compare td.num { font-family: var(--mono); font-size: 17px; text-align: right; width: 8ch; }
+table.grid.compare td.num.good { color: var(--ok); font-weight: 700; }
+table.grid.compare td.num.bad { color: var(--error); font-weight: 700; }
+table.grid.compare td.kinds { font-size: 14px; min-width: 18ch; }
+table.grid.compare td.verdict-cell { min-width: 34ch; }
+table.grid.compare td.verdict-cell .why {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+/* ----------------------------------------------------- the merging stage */
+/* LALR(1) only: the counter runs above the diagram; the merge is drawn as a movement. */
+
+.merge-counter {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 16px;
+}
+.merge-counter .side .who { font-weight: 700; margin-right: 6px; }
+.merge-counter .side .n { font-size: 19px; font-weight: 700; }
+.merge-counter .arrow { font-size: 19px; color: var(--ink-soft); }
+.merge-counter .progress {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-left: auto;
+}
+.merge-counter.done { background: var(--ok-soft); }
+.merge-caption { max-width: 78ch; margin: 0 0 10px; }
+.merged-note { border-left: 3px solid var(--accent); padding-left: 8px; }
+
+/* a state that has swallowed another, and the one on its way in */
+svg .node.merged rect.frame { stroke-width: 2.5; }
+/* An absorbed state stays in place, faded and dashed, so "merges into" has a box at both ends. */
+svg .node.absorbed { opacity: 0.4; }
+svg .node.absorbed.now { opacity: 0.6; }
+svg .node.absorbed rect.frame { stroke-dasharray: 6 4; stroke-width: 2; }
+/* ...and a ghost copy of it fades out in place over the original (a slide would cross other boxes) */
+svg .node.absorbing rect.frame { stroke-dasharray: 5 3; }
+svg .node.absorbing { opacity: 0.85; pointer-events: none; }
+svg .node.absorbing.gone { opacity: 0; }
+svg .node.absorbing {
+  transition: opacity 600ms ease-in-out;
+}
+svg .edge.merge-edge path {
+  stroke-dasharray: 6 4;
+  stroke-width: 2.5;
+}
+svg .edge.merge-edge.past path { stroke-width: 1.5; opacity: 0.6; }
+svg .edge.merge-edge text { font-style: italic; font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  svg .node.absorbing { transition: none; }
+}
+
+/* a cell that conflicts only because two states were merged */
+table.grid td.merge-conflict { border-style: double !important; border-width: 4px !important; }
+.merge-footnote { max-width: 78ch; font-weight: 600; }
+
+/* ----------------------------------------------------------- small screens */
+/* Below 1100px the panel stacks above the stage; the page scrolls vertically, never horizontally. */
+
+@media screen and (max-width: 1100px) {
+  html, body { height: auto; }
+  #app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
+  #panel, #app.panel-collapsed #panel {
+    width: auto;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    overflow: visible;
+  }
+  #app.panel-collapsed #panel { padding: 8px 16px; }
+  /* A full-width bar has room for the theme button even when collapsed. */
+  #app.panel-collapsed #theme-toggle { display: inline-block; }
+  /* `flex: none`: the base rule's `flex: 1` would size it to its content here. */
+  #stage { flex: none; height: 100vh; min-height: 560px; }
+}
+
+@media screen and (max-width: 820px) {
+  /* The inspector goes under the drawing rather than beside it. */
+  #diagram-wrap { flex-direction: column; }
+  #diagram-host { min-height: 340px; }
+  #inspector { width: auto; min-width: 0; max-height: 40%; flex: none; }
+  /* The scrubber gets a row of its own instead of a sliver beside the buttons. */
+  #player { grid-template-columns: 1fr; padding-left: 16px; padding-right: 16px; }
+  #tabs { padding-left: 16px; padding-right: 16px; }
+  #view { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ------------------------------------------------------- the grammar panel */
+/* Over the view, top right, on any step; the step underneath is untouched. */
+#grammar-panel {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 10;
+  max-width: min(520px, calc(100% - 32px));
+  max-height: calc(100% - 200px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 10px 16px 14px;
+  background: var(--panel);
+  border: 2px solid var(--line-strong);
+  border-radius: 6px;
+}
+#grammar-panel[hidden] { display: none; }
+.grammar-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.grammar-panel-head h2 { margin: 0; font-size: 17px; }
+#grammar-panel-list {
+  margin: 8px 0 0;
+  padding-left: 3.2ch;
+  font-family: var(--mono);
+  font-size: 16px;
+  line-height: 1.6;
+}
+#grammar-panel-list li { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------------ print */
+
+@media print {
+  /* Black on white whatever the theme: it names both dark selectors and comes later, so it wins. */
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #fff; --ink: #16191d; --ink-soft: #5b626b; --on-accent: #fff;
+    --accent: #000; --accent-strong: #000; --accent-soft: #fff;
+    --error: #000; --error-soft: #fff;
+    --ok: #000; --ok-soft: #fff; --warn: #000; --warn-soft: #fff;
+    --panel: #fff; --kernel: #fff; --line: #666; --line-strong: #000;
+    --stripe-a: #fff; --stripe-b: #f2f3f5;
+  }
+  #panel, #player, #tabs, #diagram-tools, #grammar-panel { display: none !important; }
+  table.grid.compare .rowhead .mark { color: #000 !important; }
+  table.grid.compare tr.showing { background: #fff; outline: 2px solid #000; }
+  table.grid.compare .switch { display: none; }
+  table.grid.compare td.num.good, table.grid.compare td.num.bad { color: #000; }
+  .merge-counter { background: #fff; }
+  .merge-counter.done { background: #fff; }
+  svg .node.absorbing { display: none; }
+  svg .edge.merge-edge path { stroke: #000; }
+  #app, #stage, #view { display: block; height: auto; overflow: visible; }
+  #diagram-frame, #diagram-wrap { display: block; height: auto; min-height: 0; }
+  #diagram-host { display: block; border: none; overflow: visible; }
+  /* On paper the whole automaton, page-wide, whatever the zoom on screen */
+  #diagram-scroll { overflow: visible; display: block; }
+  #diagram-scroll svg { width: 100% !important; height: auto !important; }
+  svg .node rect.sel-ring { display: none; }
+  #inspector { display: none; }
+  table.grid td.conflict { border: 3px dashed #000 !important; background: #fff; }
+  /* After the rule above, so a merge-caused conflict stays apart: a double rule, not a dashed one. */
+  table.grid td.merge-conflict { border: 4px double #000 !important; background: #fff; }
+  table.grid .conflict-kind { color: #000; border-color: #000; }
+  table.grid td.opens-state { cursor: auto; }
+  .prod-list li.augmented { background: #fff; text-decoration: underline; }
+  .set-link { border-color: transparent; background: #fff; }
+  .set-link .jump { display: none; }
+  /* A light tint, not white: the kernel/closure split is carried by shading alone, and its legend does not print. */
+  svg .node .kernel-bg { fill: #e6e6e6; }
+  svg .node.current rect, svg .edge.current path { stroke: #000; }
+  table.grid td.current, .set-member.current, table.trace tr.current { outline: 2px solid #000; }
+  a[href]::after { content: ""; }
+}

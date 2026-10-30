@@ -1,0 +1,6 @@
+# Picked up by rustup: `cargo build` installs this toolchain on first use.
+[toolchain]
+channel = "stable"
+profile = "minimal"
+components = ["clippy"]
+targets = ["wasm32-unknown-unknown"]

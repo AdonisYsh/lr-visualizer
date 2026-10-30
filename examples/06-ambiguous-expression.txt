@@ -1,0 +1,13 @@
+// Ambiguous expression
+// --------------------
+// Ambiguous - stated here by a human, not derived by the tool.
+//
+// Four shift-reduce conflicts under every method, which is exactly why parser
+// generators grew precedence and associativity declarations. Compare it with
+// 01-expression-grammar.txt, which describes the same language unambiguously.
+//
+// conflicts/states:  LR(0) 4/7  SLR(1) 4/7  LALR(1) 4/7  CLR(1) 4/7
+//
+// Try it with the test string:  id + id * id
+
+E -> E + E | E * E | id

@@ -1,0 +1,15 @@
+// Two empty non-terminals
+// -----------------------
+// A classic exercise: LALR(1) but not SLR(1), built from nothing but epsilon.
+// In I0 both A -> ε and B -> ε are complete. FOLLOW(A) = FOLLOW(B) = { a, b },
+// so SLR(1) reduces both on both and gets two reduce-reduce conflicts. The
+// per-item lookaheads say A only before `a` and B only before `b`, which clears
+// them. No two CLR(1) states share a core, so LALR(1) has nothing to merge.
+//
+// conflicts/states:  LR(0) 3/10  SLR(1) 2/10  LALR(1) 0/10  CLR(1) 0/10
+//
+// Try it with the test string:  a b
+
+S -> A a A b | B b B a
+A -> ε
+B -> ε

@@ -1,0 +1,17 @@
+// Pointers and assignment
+// -----------------------
+// The famous grammar that is LALR(1) but not SLR(1) - and the reason every real
+// parser generator builds LALR(1).
+//
+// Under SLR(1) the single shift-reduce conflict lands on `=`, because `=` is in
+// FOLLOW(R). CLR(1) clears it: the R -> L . reached on the left of an assignment
+// carries `=` as a lookahead and the one reached elsewhere does not. LALR(1)
+// clears it too, in ten states rather than fourteen.
+//
+// conflicts/states:  LR(0) 1/10  SLR(1) 1/10  LALR(1) 0/10  CLR(1) 0/14
+//
+// Try it with the test string:  id = id
+
+S -> L = R | R
+L -> * R | id
+R -> L

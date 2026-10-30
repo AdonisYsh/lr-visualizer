@@ -1,0 +1,15 @@
+// Expression grammar (classic)
+// ----------------------------
+// The standard textbook grammar, and the one to start with.
+// SLR(1) but not LR(0): under LR(0), state I2 picks up a shift and a reduce in
+// the same cell on `*`. Switch to SLR(1) and FOLLOW(E) leaves the `*` column
+// alone. CLR(1) clears it too, but needs 22 states to do what SLR(1) does in 12;
+// LALR(1) merges those 22 back down to 12 and keeps the answer.
+//
+// conflicts/states:  LR(0) 2/12  SLR(1) 0/12  LALR(1) 0/12  CLR(1) 0/22
+//
+// Try it with the test string:  id + id * id
+
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id

@@ -1,0 +1,70 @@
+# Build dist/index.html and publish it, with its checksum, to GitHub Pages.
+#
+# Actions are pinned to full commit SHAs, with the tag in the trailing comment;
+# a tag can be moved, a commit cannot. Update the SHA and comment together.
+
+name: Build and publish
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions: {}
+
+# One deployment at a time; never cancel a running one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No build cache here: what is published is built from scratch.
+      - uses: ./.github/actions/toolchain
+
+      - name: Run the engine test suite
+        run: cd engine && cargo test --locked
+
+      # Runs clippy, then moves the bundle into dist/ only after the gate passes.
+      - name: Build dist/index.html
+        run: ./build.sh
+
+      - name: Prove the gate can fail
+        run: scripts/test-check-dist.sh dist/index.html
+
+      - name: Re-check the published file
+        run: scripts/check-dist.sh dist/index.html
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site
+          cp dist/index.html _site/index.html
+          cp -r examples _site/examples
+          (cd _site && sha256sum index.html > index.html.sha256)
+          cat _site/index.html.sha256
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    # The only job that may publish; it checks nothing out.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

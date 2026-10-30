@@ -1,0 +1,14 @@
+// Dangling else
+// -------------
+// Ambiguous - that is stated here by a human, not derived by the tool.
+//
+// Gives a shift-reduce conflict on `e` in all four methods, CLR(1) included:
+// the textbook demonstration that ambiguity is not something a stronger parser
+// can fix. Note that LALR(1) has the conflict too and that merging is not what
+// caused it - the tool distinguishes the two cases.
+//
+// conflicts/states:  LR(0) 1/7  SLR(1) 1/7  LALR(1) 1/7  CLR(1) 1/12
+//
+// Try it with the test string:  i i a e a
+
+S -> i S e S | i S | a

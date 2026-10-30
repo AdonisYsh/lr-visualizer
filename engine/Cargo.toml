@@ -1,0 +1,33 @@
+[package]
+name = "lr-engine"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77"
+description = "LR(0)/SLR(1)/CLR(1)/LALR(1) analysis engine that emits a replayable step log"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Exact pin: wasm-bindgen-cli must be this same version, or bindgen fails with
+# "invalid schema version". build.sh and CI read it from here.
+wasm-bindgen = "=0.2.127"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+# Random-grammar property tests (tests/random_grammars.rs). Dev-only: it is
+# never part of the library or the wasm build. Default features are trimmed
+# because `fork` and `timeout` (process forking, tempfiles) are not used, and
+# an exact version is pinned so the test inputs are reproducible.
+proptest = { version = "=1.12.0", default-features = false, features = ["std"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+# Wrapping arithmetic would silently corrupt state ids / indices instead of
+# surfacing a bug, so keep overflow checks on even in release.
+overflow-checks = true

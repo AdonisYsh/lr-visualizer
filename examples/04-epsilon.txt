@@ -1,0 +1,16 @@
+// Epsilon
+// -------
+// How a nullable non-terminal ripples through FIRST, FOLLOW and the item sets.
+// LR(0) conflicts; every other method clears it, and none of them needs an extra
+// state to do so.
+//
+// Epsilon may be written as an empty right-hand side, or as one of
+//   eps   epsilon   #   ε
+//
+// conflicts/states:  LR(0) 1/6  SLR(1) 0/6  LALR(1) 0/6  CLR(1) 0/6
+//
+// Try it with the test string:  b
+
+S -> A B
+A -> a | ε
+B -> b

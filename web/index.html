@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- CSP-START -->
+<!-- Development policy: adds the dev server to the loadable sources. build.sh swaps in the strict one. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<!-- CSP-END -->
+<title>LR Parsing Visualizer</title>
+<!-- STYLE-START -->
+<link rel="stylesheet" href="style.css">
+<!-- STYLE-END -->
+</head>
+<body>
+
+<div id="app">
+  <aside id="panel" aria-label="Grammar and settings">
+    <!-- Stays visible when the panel is collapsed to a rail, so the expand
+         button is always one click (or Tab and Enter) away. -->
+    <div id="panel-bar">
+      <button id="panel-toggle" type="button" aria-expanded="true"
+        aria-controls="panel-body" aria-label="Side panel"
+        title="Hide the side panel">&#171;</button>
+      <button id="theme-toggle" type="button" aria-pressed="false"
+        title="Switch to the dark theme">Dark theme</button>
+    </div>
+    <div id="panel-body">
+    <h1>LR Parsing Visualizer<span class="sub">Bottom-up parsing, one step at a time</span></h1>
+
+    <fieldset>
+      <legend>Parser variant</legend>
+      <div class="variant" id="variants" role="radiogroup" aria-label="Parser variant"></div>
+    </fieldset>
+
+    <div>
+      <label class="field" for="preset">Example grammar</label>
+      <select id="preset"></select>
+    </div>
+
+    <div>
+      <label class="field" for="grammar">Grammar</label>
+      <textarea id="grammar" spellcheck="false" autocomplete="off"
+        aria-describedby="grammar-help"></textarea>
+      <p class="note" id="grammar-help">One production per line. <code>-&gt;</code>, <code>&#8594;</code> or <code>::=</code>. <code>|</code> separates alternatives. Empty right-hand side, <code>&#949;</code>, <code>#</code> or <code>eps</code> for epsilon. Lines starting <code>//</code> are ignored.</p>
+    </div>
+
+    <div>
+      <label class="field" for="teststring">Test string <span class="note" style="font-weight:400">(optional)</span></label>
+      <input type="text" id="teststring" spellcheck="false" autocomplete="off">
+    </div>
+
+    <button id="analyze" type="button">Analyze</button>
+
+    <div id="messages" role="status" aria-live="polite"></div>
+    <div id="symbols"></div>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <nav id="tabs" role="tablist" aria-label="Analysis phases"></nav>
+    <div id="view" role="tabpanel" tabindex="0"></div>
+    <!-- The grammar, numbered as the engine numbers it, over the stage on any
+         step. Opening it pauses Play and leaves the step where it is. -->
+    <section id="grammar-panel" hidden aria-labelledby="grammar-panel-title">
+      <div class="grammar-panel-head">
+        <h2 id="grammar-panel-title">Grammar</h2>
+        <button id="grammar-panel-close" type="button" aria-label="Close the grammar">&#10005;</button>
+      </div>
+      <ol id="grammar-panel-list" start="0"></ol>
+    </section>
+    <div id="player">
+      <div id="controls">
+        <button id="btn-first"  type="button" title="First step (Home)"    aria-label="Jump to first step">|&#9664;</button>
+        <button id="btn-prev"   type="button" title="Previous step (Left)" aria-label="Previous step">&#9664; Prev</button>
+        <button id="btn-next"   type="button" title="Next step (Right or Space)" aria-label="Next step">Next &#9654;</button>
+        <button id="btn-last"   type="button" title="Last step (End)"      aria-label="Jump to last step">&#9654;|</button>
+        <button id="btn-play"   type="button" title="Play / pause (P)"     aria-label="Play">&#9654; Play</button>
+        <button id="btn-reset"  type="button" title="Back to the start"    aria-label="Reset">Reset</button>
+        <button id="btn-grammar" type="button" title="Show the grammar (G)" aria-label="Show grammar" aria-expanded="false" aria-controls="grammar-panel">Show grammar</button>
+        <!-- Values are milliseconds per step while playing. Slow by default:
+             each step's explanation is meant to be read aloud. -->
+        <label id="speed" for="speed-input">Speed
+          <select id="speed-input">
+            <option value="5000">5 s per step</option>
+            <option value="2500" selected>2.5 s per step</option>
+            <option value="1000">1 s per step</option>
+            <option value="500">0.5 s per step</option>
+          </select>
+        </label>
+      </div>
+      <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Step position">
+      <!-- A one-line summary of the step, with the engine's full explanation
+           behind a disclosure button. Built once here and only updated by
+           app.js, so the toggle keeps keyboard focus while stepping. -->
+      <div id="explain">
+        <p id="explain-line">
+          <span class="phase" id="explain-phase" hidden></span>
+          <span id="explain-summary"></span>
+          <button id="explain-toggle" type="button" aria-expanded="false"
+            aria-controls="explain-full" hidden>Show full explanation</button>
+        </p>
+        <p id="explain-full" hidden></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS-START -->
+<script src="app.js"></script>
+<script src="grammars.js"></script>
+<script src="sets.js"></script>
+<script src="table.js"></script>
+<script src="trace.js"></script>
+<script src="diagram.js"></script>
+<script src="compare.js"></script>
+<!-- SCRIPTS-END -->
+<!-- WASM-START -->
+<script type="module">
+  // Development loader; build.sh replaces this block with an inlined copy.
+  // A failed load (pkg/ missing, .wasm rejected) and a throw from the page's
+  // own start-up are reported separately: loadFailed only ever sees the load.
+  function loadFailed(e) {
+    if (window.LRV && typeof window.LRV.bootFailed === 'function') window.LRV.bootFailed(String(e));
+    else console.error('LR visualizer: the engine could not be loaded', e);
+  }
+  function startPage(engine) {
+    try {
+      window.LRV.boot(engine.analyze);
+    } catch (e) {
+      if (window.LRV && typeof window.LRV.reportRenderError === 'function') window.LRV.reportRenderError(e);
+      else console.error('LR visualizer: internal rendering error', e);
+    }
+  }
+  import('./pkg/lr_engine.js')
+    .then(function (engine) { return engine.default().then(function () { return engine; }); })
+    .then(startPage, loadFailed);
+</script>
+<!-- WASM-END -->
+</body>
+</html>

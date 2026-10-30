@@ -1,0 +1,17 @@
+// Reduce-reduce
+// -------------
+// Ambiguous - stated here by a human, not derived by the tool.
+//
+// The smallest possible reduce-reduce conflict: one state holds A -> a . and
+// B -> a . at once. LR(0) writes both into every column and conflicts twice;
+// SLR(1) narrows it to one cell, and CLR(1) and LALR(1) get the same single
+// conflict for the same reason - FOLLOW(A) = FOLLOW(B) = { $ }, and both items
+// genuinely carry $. Nothing merges here, so LALR(1) is not to blame.
+//
+// conflicts/states:  LR(0) 2/5  SLR(1) 1/5  LALR(1) 1/5  CLR(1) 1/5
+//
+// Try it with the test string:  a
+
+S -> A | B
+A -> a
+B -> a

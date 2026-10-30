@@ -1,0 +1,23 @@
+# Build output (build.sh regenerates all of it)
+/engine/target/
+/dist/*
+!/dist/.gitkeep
+/web/pkg/
+/_site/
+
+# Environment and editor
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+__pycache__/
+*.py[cod]
+
+# Test and scan output
+/test-logs/
+/tests/browser/out/
+/tests/perf/out/
+*.sarif

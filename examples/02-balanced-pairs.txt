@@ -1,0 +1,11 @@
+// Balanced pairs
+// --------------
+// Small and clean, and conflict-free in all four methods - a good first look at
+// a table with nothing wrong with it. CLR(1) still grows it from six states to
+// ten, and LALR(1) folds those four straight back out again.
+//
+// conflicts/states:  LR(0) 0/6  SLR(1) 0/6  LALR(1) 0/6  CLR(1) 0/10
+//
+// Try it with the test string:  a a c b b
+
+S -> a S b | c

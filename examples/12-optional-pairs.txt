@@ -1,0 +1,12 @@
+// Optional pairs
+// --------------
+// a^n b^n with an epsilon base case. In I0 the empty production S -> ε is
+// already complete, so LR(0) reduces it in every column - including `a`, where
+// it should shift. FOLLOW(S) = { b, $ } leaves the `a` column alone, so SLR(1)
+// and everything stronger is conflict-free.
+//
+// conflicts/states:  LR(0) 2/5  SLR(1) 0/5  LALR(1) 0/5  CLR(1) 0/8
+//
+// Try it with the test string:  a a b b
+
+S -> a S b | ε

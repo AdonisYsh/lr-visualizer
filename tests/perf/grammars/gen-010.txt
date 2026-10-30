@@ -1,0 +1,16 @@
+// GENERATED FILE - do not edit by hand.
+// Written by tests/perf/gen_grammars.py, which is deterministic: run it
+// again and this file comes out byte for byte the same.
+//
+// Layered-precedence expression grammar: 4 levels of left-recursive
+// binary operators over a parenthesised atom. Level 1 binds loosest.
+//
+// productions: 10  (after `|` expansion, not counting the augmented
+//                  E01' -> E01)
+// non-terminals: 5   terminals: 7
+
+E01 -> E01 op01 E02 | E02
+E02 -> E02 op02 E03 | E03
+E03 -> E03 op03 E04 | E04
+E04 -> E04 op04 atom | atom
+atom -> ( E01 ) | id

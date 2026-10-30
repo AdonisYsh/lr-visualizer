@@ -1,0 +1,15 @@
+// Two halves
+// ----------
+// Dragon book figure 4.42, state for state, and the best grammar to watch
+// LALR(1) on. Seven states under LR(0) and SLR(1), ten under CLR(1), back to
+// seven under LALR(1). The three merges are I3+I6, I4+I7 and I8+I9: same items,
+// same dots, different lookaheads.
+//
+// Pick LALR(1) and step to the end of the Item Sets tab to watch them fold.
+//
+// conflicts/states:  LR(0) 0/7  SLR(1) 0/7  LALR(1) 0/7  CLR(1) 0/10
+//
+// Try it with the test string:  c d d
+
+S -> C C
+C -> c C | d

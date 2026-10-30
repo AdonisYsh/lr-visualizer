@@ -1,0 +1,61 @@
+// Pascal subset
+// -------------
+// Hand-written for the performance corpus (tests/perf), not generated and not
+// a preset. It is the one grammar here shaped like a real language rather than
+// like a textbook exercise: a program header, var declarations, nested
+// procedures with parameters, a compound statement, assignment, procedure
+// call, if/then/else, while/do, and expressions in three levels (relational,
+// additive, multiplicative) over a factor.
+//
+// Written the way a yacc grammar is: UPPERCASE names are tokens the scanner
+// would hand over (keywords, ID, NUM, and the two-character operators ASSIGN
+// `:=`, NE `<>`, LE `<=`, GE `>=`), single punctuation is itself, and the
+// lowercase names are the non-terminals. Space-separated mode.
+//
+// 57 productions (after `|` expansion, not counting the augmented
+// program' -> program), 37 terminals, 23 non-terminals.
+//
+// Measured with the engine, not asserted:
+//
+// conflicts/states:  LR(0) 49/96  SLR(1) 1/96  LALR(1) 1/96  CLR(1) 1/286
+//
+// LR(0)'s 49 are all shift-reduce: the blanket reduce meets a shift wherever a
+// rule can be empty (var_part, the empty statement) or is a prefix of a longer
+// one (`ID` against `ID ASSIGN expr`, a term against `term mulop factor`).
+// FOLLOW clears 48 of them. The one that every method keeps is the dangling
+// else - shift ELSE or reduce `stmt -> IF expr THEN stmt` - and it stays
+// because the grammar really does allow both readings of
+// `IF e THEN IF e THEN s ELSE s`; that is the author's knowledge of the
+// grammar, not something the tool derives. It was left in on purpose: a real
+// Pascal grammar has it too, and yacc settles it by preferring the shift.
+// CLR(1) pays about three times the states for the same single conflict.
+
+program -> PROGRAM ID ; block .
+block -> var_part proc_part compound
+
+var_part -> VAR var_decls | eps
+var_decls -> var_decls var_decl | var_decl
+var_decl -> id_list : type ;
+id_list -> id_list , ID | ID
+type -> INTEGER | REAL | BOOLEAN
+
+proc_part -> proc_part proc_decl | eps
+proc_decl -> PROCEDURE ID params ; block ;
+params -> ( param_list ) | eps
+param_list -> param_list ; param | param
+param -> id_list : type
+
+compound -> BEGIN stmt_list END
+stmt_list -> stmt_list ; stmt | stmt
+stmt -> ID ASSIGN expr | ID | ID ( arg_list ) | compound
+stmt -> IF expr THEN stmt | IF expr THEN stmt ELSE stmt
+stmt -> WHILE expr DO stmt | eps
+arg_list -> arg_list , expr | expr
+
+expr -> simple relop simple | simple
+relop -> = | NE | < | LE | > | GE
+simple -> simple addop term | term
+addop -> + | - | OR
+term -> term mulop factor | factor
+mulop -> * | / | DIV | MOD | AND
+factor -> ID | NUM | ( expr ) | NOT factor

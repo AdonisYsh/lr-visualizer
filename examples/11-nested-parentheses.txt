@@ -1,0 +1,11 @@
+// Nested parentheses
+// ------------------
+// The smallest interesting LR(0) grammar: every state either shifts or reduces,
+// never both, so LR(0) builds a conflict-free table without any lookahead at all.
+// CLR(1) still splits it from six states to ten.
+//
+// conflicts/states:  LR(0) 0/6  SLR(1) 0/6  LALR(1) 0/6  CLR(1) 0/10
+//
+// Try it with the test string:  ( ( a ) )
+
+S -> ( S ) | a

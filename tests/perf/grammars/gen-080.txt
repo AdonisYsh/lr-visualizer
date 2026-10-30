@@ -1,0 +1,51 @@
+// GENERATED FILE - do not edit by hand.
+// Written by tests/perf/gen_grammars.py, which is deterministic: run it
+// again and this file comes out byte for byte the same.
+//
+// Layered-precedence expression grammar: 39 levels of left-recursive
+// binary operators over a parenthesised atom. Level 1 binds loosest.
+//
+// productions: 80  (after `|` expansion, not counting the augmented
+//                  E01' -> E01)
+// non-terminals: 40   terminals: 42
+
+E01 -> E01 op01 E02 | E02
+E02 -> E02 op02 E03 | E03
+E03 -> E03 op03 E04 | E04
+E04 -> E04 op04 E05 | E05
+E05 -> E05 op05 E06 | E06
+E06 -> E06 op06 E07 | E07
+E07 -> E07 op07 E08 | E08
+E08 -> E08 op08 E09 | E09
+E09 -> E09 op09 E10 | E10
+E10 -> E10 op10 E11 | E11
+E11 -> E11 op11 E12 | E12
+E12 -> E12 op12 E13 | E13
+E13 -> E13 op13 E14 | E14
+E14 -> E14 op14 E15 | E15
+E15 -> E15 op15 E16 | E16
+E16 -> E16 op16 E17 | E17
+E17 -> E17 op17 E18 | E18
+E18 -> E18 op18 E19 | E19
+E19 -> E19 op19 E20 | E20
+E20 -> E20 op20 E21 | E21
+E21 -> E21 op21 E22 | E22
+E22 -> E22 op22 E23 | E23
+E23 -> E23 op23 E24 | E24
+E24 -> E24 op24 E25 | E25
+E25 -> E25 op25 E26 | E26
+E26 -> E26 op26 E27 | E27
+E27 -> E27 op27 E28 | E28
+E28 -> E28 op28 E29 | E29
+E29 -> E29 op29 E30 | E30
+E30 -> E30 op30 E31 | E31
+E31 -> E31 op31 E32 | E32
+E32 -> E32 op32 E33 | E33
+E33 -> E33 op33 E34 | E34
+E34 -> E34 op34 E35 | E35
+E35 -> E35 op35 E36 | E36
+E36 -> E36 op36 E37 | E37
+E37 -> E37 op37 E38 | E38
+E38 -> E38 op38 E39 | E39
+E39 -> E39 op39 atom | atom
+atom -> ( E01 ) | id

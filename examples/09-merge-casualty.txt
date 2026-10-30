@@ -1,0 +1,18 @@
+// Merge casualty
+// --------------
+// The grammar that is CLR(1) but NOT LALR(1) - the one case where merging costs
+// something, and the reason CLR(1) is still worth teaching.
+//
+// CLR(1) handles it with no conflicts at all. LALR(1) merges CLR states I6 and
+// I9 - one holds A -> c . with lookahead {d} against B -> c . with {e}, the other
+// holds them the other way round - and the union puts both reductions in the same
+// two cells. Merging can never cause a shift-reduce conflict; this is the other
+// kind, and it is the only kind it can cause.
+//
+// conflicts/states:  LR(0) 6/13  SLR(1) 2/13  LALR(1) 2/13  CLR(1) 0/14
+//
+// Try it with the test string:  a c d
+
+S -> a A d | b B d | a B e | b A e
+A -> c
+B -> c
